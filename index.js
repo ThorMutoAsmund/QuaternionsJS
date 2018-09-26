@@ -52,10 +52,9 @@ V.prototype.toString = function()
 //
 class AA {
   constructor(x=0, y=0, z=0, t=0) {
-    let m = 1;//Math.sqrt(x*x + y*y + z*z);
-    this.x = x/m;
-    this.y = y/m;
-    this.z = z/m;
+    this.x = x;
+    this.y = y;
+    this.z = z;
     this.t = t;
     this.precision = 8;
   }
@@ -67,6 +66,7 @@ class AA {
 
   normalize() {
     let n = this.magnitude();
+    if (n == 0) return new AA(this.x,this.y, this.z, this.t);
     let a = this.x/n, b = this.y/n, c = this.z/n;
     let nt = this.t;
     while (nt <= -Math.PI) nt += 2*Math.PI;
@@ -245,10 +245,14 @@ class Q
   }
   toAxisAngle() {
     let q = this;
-    let angle = 2 * Math.acos(q.w)
-    let x = q.x / Math.sqrt(1-q.w*q.w)
-    let y = q.y / Math.sqrt(1-q.w*q.w)
-    let z = q.z / Math.sqrt(1-q.w*q.w)
+    let angle = 2 * Math.acos(q.w);
+    let d = Math.sqrt(1-q.w*q.w);
+    if (d < 0.0001) {
+      return new AA(1,0,0,0);
+    }
+    let x = q.x / d;
+    let y = q.y / d;
+    let z = q.z / d;
     return new AA(x,y,z,angle);
   }
 }
