@@ -5,10 +5,8 @@
 //
 // Number extension
 //
-Number.prototype.toFixedDown = function(digits) {
-  let re = new RegExp("(\\d+\\.\\d{" + digits + "})(\\d)"),
-      m = this.toString().match(re);
-  return m ? parseFloat(m[1]) : this.valueOf();
+Number.prototype.toFixedDown = function(digits) {  
+  return this.toFixed(digits);
 };
 
 Number.prototype.deg = function() {
@@ -47,6 +45,72 @@ V.prototype.toString = function()
 {
   let r = this.toFixedDown();
   return "V ( x: "+r.x+", y: "+r.y+", z: "+r.z+" }";
+}
+
+//
+// 4D Vector class
+//
+class AA {
+  constructor(x=0, y=0, z=0, t=0) {
+    let m = 1;//Math.sqrt(x*x + y*y + z*z);
+    this.x = x/m;
+    this.y = y/m;
+    this.z = z/m;
+    this.t = t;
+    this.precision = 8;
+  }
+
+  magnitude() {
+    let a = this.x, b = this.y, c = this.z;
+    return Math.sqrt(a*a + b*b + c*c);
+  }
+
+  normalize() {
+    let n = this.magnitude();
+    let a = this.x/n, b = this.y/n, c = this.z/n;
+    let nt = this.t;
+    while (nt <= -Math.PI) nt += 2*Math.PI;
+    while (nt > Math.PI) nt -= 2*Math.PI;
+    if (nt < 0) {
+      nt = -nt;
+      a = -a;
+      b = -b;
+      c = -c;
+    }
+    return new AA(
+      a,
+      b,
+      c,
+      nt
+    );
+  }
+  
+  toFixedDown() {
+    let e = this.precision;
+    return new AA(
+      this.x.toFixedDown(e),
+      this.y.toFixedDown(e),
+      this.z.toFixedDown(e),
+      this.t.toFixedDown(e),
+    );
+  }
+}
+
+AA.prototype.toString = function()
+{
+  let r = this.normalize();
+  let tstar = (r.t/Math.PI);
+  r.x*=tstar;
+  r.y*=tstar;
+  r.z*=tstar;
+  r = r.toFixedDown();
+  return "AA ( x*: "+r.x+", y*: "+r.y+", z*: "+r.z+" }";
+}
+AA.prototype.toStringRaw = function()
+{
+  let r = this.normalize();
+  r = r.toFixedDown();
+  return "AARAW ( x: "+r.x+", y: "+r.y+", z: "+r.z+", t*: "+(r.t/Math.PI)+" }";
 }
 
 //
@@ -179,6 +243,14 @@ class Q
 
     return new V(roll, pitch, yaw);
   }
+  toAxisAngle() {
+    let q = this;
+    let angle = 2 * Math.acos(q.w)
+    let x = q.x / Math.sqrt(1-q.w*q.w)
+    let y = q.y / Math.sqrt(1-q.w*q.w)
+    let z = q.z / Math.sqrt(1-q.w*q.w)
+    return new AA(x,y,z,angle);
+  }
 }
 
 Q.prototype.toString = function()
@@ -190,7 +262,9 @@ Q.prototype.toString = function()
 //
 // Demo
 //
-{
+
+function demo1()
+{   
   let q1 = Q.fromRotation(new V(0,1,0), (45).deg());
   let q2 = Q.fromRotation(new V(0,1,0), (45).deg());
   let q = q1.mult(q2);
@@ -215,3 +289,29 @@ Q.prototype.toString = function()
   console.xlog(q3.toEulerAngles());
 }
 
+function testingAA()
+{
+  let a = [
+    Q.fromRotation(new V(0,1,0), (120).deg()),
+    Q.fromRotation(new V(0,1,0), (480).deg())];
+  let b = a.map(v => v.toAxisAngle().normalize());
+
+  console.log(a.map(v => v.toString()));
+  console.log(b.map(v => v.toString()));
+}
+
+{
+  let a = Q.fromRotation(new V(0,1,0), (0).deg());
+  let b = Q.fromRotation(new V(0,1,0), (120).deg());
+  let c = Q.fromRotation(new V(0,1,0), (240).deg());
+  let d = a.mult(Q.fromRotation(new V(1,0,0), (120).deg()))
+    .mult(Q.fromRotation(new V(0,0,1), (180).deg()));
+  let q = [
+    a,a.mult(Q.fromRotation(new V(0,0,1), (120).deg())),a.mult(Q.fromRotation(new V(0,0,1), (240).deg())),
+    b,b.mult(Q.fromRotation(new V(0,0,1), (120).deg())),b.mult(Q.fromRotation(new V(0,0,1), (240).deg())),
+    c,c.mult(Q.fromRotation(new V(0,0,1), (120).deg())),c.mult(Q.fromRotation(new V(0,0,1), (240).deg())),
+    d,d.mult(Q.fromRotation(new V(0,0,1), (120).deg())),d.mult(Q.fromRotation(new V(0,0,1), (240).deg())),
+  ];
+
+  console.log(q.map(i => i.toAxisAngle().toString()));
+}
